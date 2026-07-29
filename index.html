@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Jayesh Thar — Portfolio Room</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0a0a0a; font-family:'Courier New', monospace; }
+  #canvas-wrap { position:fixed; inset:0; }
+  canvas { display:block; width:100%; height:100%; image-rendering: pixelated; }
+
+  /* ---------- Boot ---------- */
+  #boot { position:fixed; inset:0; background:#3b2a1a; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:100; color:#fff; text-align:center; gap:16px; padding:20px; }
+  #boot .title { font-size:26px; letter-spacing:2px; color:#7ee36b; text-shadow:3px 3px 0 #1a1a1a; font-weight:bold; }
+  #boot .name { font-size:14px; color:#e3c76b; letter-spacing:3px; }
+  #boot .sub { font-size:12px; color:#d8c9a3; letter-spacing:1px; max-width:420px; line-height:1.6; }
+  .mc-btn { font-family:inherit; font-size:14px; letter-spacing:1px; color:#fff; background:#6b8e3d; border:3px solid #2c3e1a; box-shadow: inset -3px -3px 0 #4a6428, inset 3px 3px 0 #8fb85c; padding:12px 24px; cursor:pointer; text-transform:uppercase; }
+  .mc-btn:active { box-shadow: inset 3px 3px 0 #4a6428, inset -3px -3px 0 #8fb85c; }
+  #loadStage .bar-outer { width:260px; height:16px; border:2px solid #1a1a1a; background:#222; }
+  #loadStage .bar-inner { height:100%; width:0%; background:#7ee36b; transition:width .15s; }
+  #nameStage { display:none; flex-direction:column; align-items:center; gap:14px; }
+  #nameInput { font-family:inherit; font-size:14px; padding:10px 12px; border:3px solid #2c3e1a; background:#fff; color:#222; width:260px; text-align:center; letter-spacing:1px; }
+  #nameStage .hint-small { font-size:10px; color:#c9b98a; }
+
+  /* ---------- Intro flythrough overlay ---------- */
+  #introOverlay { position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.25); pointer-events:none; }
+  #introText { font-size:22px; color:#fff; text-shadow:2px 2px 0 #000, 0 0 18px rgba(0,0,0,.6); letter-spacing:1px; opacity:0; transition:opacity .25s; text-align:center; padding:0 20px; }
+
+  /* ---------- HUD ---------- */
+  #hud { position:fixed; inset:0; pointer-events:none; z-index:20; display:none; }
+  #crosshair { position:absolute; top:50%; left:50%; width:6px; height:6px; transform:translate(-50%,-50%); background:#fff; box-shadow:0 0 0 1px #000; opacity:.85; }
+  #hint { position:absolute; bottom:130px; left:50%; transform:translateX(-50%); background:rgba(20,15,10,.75); border:2px solid #000; color:#fff; font-size:12px; padding:8px 14px; letter-spacing:.5px; display:none; white-space:nowrap; }
+  #resumeClick { position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); pointer-events:auto; cursor:pointer; }
+  #resumeClick span { background:rgba(20,15,10,.85); border:2px solid #7ee36b; color:#fff; padding:12px 20px; font-size:13px; letter-spacing:.5px; }
+
+  #topbar { position:absolute; top:14px; left:14px; right:14px; display:flex; justify-content:space-between; align-items:flex-start; }
+  #minimap { width:120px; height:120px; background:rgba(20,15,10,.7); border:2px solid #000; pointer-events:none; }
+  #settingsBtn { pointer-events:auto; cursor:pointer; background:rgba(20,15,10,.7); border:2px solid #000; color:#fff; padding:8px 12px; font-size:13px; letter-spacing:.5px; }
+
+  #settingsPanel {
+    display:none; position:absolute; top:56px; right:14px; width:280px; max-height:80vh; overflow-y:auto;
+    background:#2b2318; border:3px solid #000; box-shadow: inset 0 0 0 3px #4a3d28; color:#eee; pointer-events:auto; z-index:30;
+  }
+  #settingsPanel .sp-head { display:flex; justify-content:space-between; align-items:center; background:#1d1710; padding:10px 14px; border-bottom:2px solid #000; }
+  #settingsPanel .sp-head h3 { font-size:13px; color:#7ee36b; letter-spacing:.5px; }
+  #settingsPanel .sp-body { padding:14px; font-size:12px; line-height:1.6; }
+  #settingsPanel h4 { color:#e3c76b; font-size:11px; letter-spacing:.5px; margin:12px 0 6px; }
+  #settingsPanel button.sp-btn {
+    display:block; width:100%; font-family:inherit; font-size:11px; letter-spacing:.5px; color:#fff;
+    background:#3d5a8e; border:2px solid #000; padding:8px; margin-bottom:8px; cursor:pointer; text-align:left;
+    box-shadow: inset -2px -2px 0 #283e64, inset 2px 2px 0 #5c7cb8;
+  }
+  #settingsCloseBtn { background:#6b3d3d; border:2px solid #000; color:#fff; width:24px; height:24px; cursor:pointer; font-size:12px; }
+  #settingsPanel .kv { color:#c9c2b0; font-size:11px; margin-bottom:4px; }
+  #skinRow { display:flex; gap:8px; margin-top:6px; }
+  .skin-swatch { width:26px; height:26px; border:2px solid #000; cursor:pointer; }
+  .skin-swatch.active { outline:2px solid #7ee36b; }
+  #profileName { color:#7ee36b; font-weight:bold; }
+
+  /* ---------- Hotbar ---------- */
+  #hotbar { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); display:flex; gap:8px; pointer-events:auto; }
+  .hb-slot {
+    width:52px; height:52px; background:rgba(20,15,10,.8); border:2px solid #000; border-radius:5px;
+    box-shadow: inset -2px -2px 0 rgba(0,0,0,.45), inset 2px 2px 0 rgba(255,255,255,.12);
+    position:relative; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .hb-slot.active { box-shadow: 0 0 0 2px #7ee36b, inset -2px -2px 0 rgba(0,0,0,.45), inset 2px 2px 0 rgba(255,255,255,.12); }
+  .hb-swatch { width:36px; height:36px; border:2px solid rgba(0,0,0,.5); border-radius:3px; box-shadow: inset -2px -2px 0 rgba(0,0,0,.25), inset 2px 2px 0 rgba(255,255,255,.2); }
+  .hb-book { background:linear-gradient(135deg, #9a3b3b 0 55%, #f0e6c8 55% 100%); }
+  .hb-key { position:absolute; bottom:2px; right:3px; font-size:9px; color:#fff; text-shadow:1px 1px 0 #000; background:rgba(0,0,0,.55); padding:0 4px; border-radius:2px; line-height:1.5; }
+
+  /* ---------- Mobile controls ---------- */
+  #joystick-zone { position:absolute; left:24px; bottom:24px; width:130px; height:130px; display:none; pointer-events:auto; touch-action:none; }
+  #joystick-base { width:100%; height:100%; border-radius:50%; background:rgba(255,255,255,.10); border:3px solid rgba(255,255,255,.35); }
+  #joystick-handle { position:absolute; top:50%; left:50%; width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,.55); border:3px solid rgba(0,0,0,.4); transform:translate(-50%,-50%); }
+  #look-zone { position:absolute; right:0; top:0; bottom:0; width:60%; display:none; pointer-events:auto; touch-action:none; }
+  #interact-btn { position:absolute; right:28px; bottom:100px; width:70px; height:70px; border-radius:50%; background:rgba(126,227,107,.35); border:3px solid rgba(126,227,107,.8); color:#fff; font-size:10px; font-weight:bold; letter-spacing:.5px; display:none; align-items:center; justify-content:center; pointer-events:auto; text-align:center; touch-action:none; }
+  #jump-btn { position:absolute; right:24px; bottom:182px; width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,.18); border:3px solid rgba(255,255,255,.5); color:#fff; font-size:10px; font-weight:bold; display:none; align-items:center; justify-content:center; pointer-events:auto; touch-action:none; }
+  #break-btn, #place-btn { position:absolute; width:56px; height:56px; border-radius:50%; font-size:10px; font-weight:bold; color:#fff; display:none; align-items:center; justify-content:center; pointer-events:auto; touch-action:none; border:3px solid #000; }
+  #break-btn { right:96px; bottom:100px; background:rgba(154,59,59,.55); }
+  #place-btn { right:96px; bottom:164px; background:rgba(214,178,59,.55); }
+  #fly-down-btn { position:absolute; right:24px; bottom:246px; width:52px; height:52px; border-radius:50%; background:rgba(120,120,255,.3); border:3px solid rgba(150,150,255,.7); color:#fff; font-size:9px; font-weight:bold; display:none; align-items:center; justify-content:center; pointer-events:auto; touch-action:none; }
+  #inv-btn { position:absolute; left:50%; bottom:82px; transform:translateX(-50%); background:rgba(20,15,10,.8); border:2px solid #000; color:#fff; font-size:11px; padding:6px 14px; letter-spacing:.5px; cursor:pointer; pointer-events:auto; }
+  #flyBadge { position:absolute; top:56px; left:14px; background:rgba(126,227,107,.85); color:#0a0a0a; font-size:11px; font-weight:bold; padding:6px 12px; letter-spacing:.5px; display:none; }
+  #sitBadge { position:absolute; top:56px; left:14px; background:rgba(214,178,59,.9); color:#1a1408; font-size:11px; font-weight:bold; padding:6px 12px; letter-spacing:.5px; display:none; }
+
+  /* ---------- Inventory dialog ---------- */
+  #inventoryOverlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:55; display:none; align-items:center; justify-content:center; padding:20px; }
+  #inventoryBox { width:min(520px,100%); max-height:82vh; overflow-y:auto; background:#2b2318; border:4px solid #000; box-shadow: inset 0 0 0 4px #4a3d28; color:#eee; }
+  #inventoryBox .inv-head { display:flex; align-items:center; justify-content:space-between; background:#1d1710; padding:14px 18px; border-bottom:3px solid #000; }
+  #inventoryBox .inv-head h2 { font-size:14px; color:#7ee36b; letter-spacing:1px; }
+  #inventoryClose { background:#6b3d3d; border:2px solid #000; color:#fff; width:26px; height:26px; cursor:pointer; font-size:14px; }
+  #inventoryGrid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; padding:18px; }
+  .inv-cell { background:rgba(0,0,0,.2); border:2px solid #000; padding:8px; text-align:center; cursor:pointer; }
+  .inv-cell:hover { border-color:#7ee36b; }
+  .inv-swatch { width:100%; height:44px; border:2px solid rgba(0,0,0,.5); border-radius:3px; margin-bottom:6px; }
+  .inv-label { font-size:9px; color:#d6d0c4; letter-spacing:.3px; }
+  #inventoryBox .inv-note { padding:0 18px 16px; font-size:11px; color:#9a8f78; }
+  #guideOverlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:55; display:none; align-items:center; justify-content:center; padding:20px; }
+  #guideBox { width:min(480px,100%); max-height:82vh; overflow-y:auto; background:#2b2318; border:4px solid #000; box-shadow: inset 0 0 0 4px #4a3d28; color:#eee; }
+  #guideList { padding:16px 18px; font-size:12px; line-height:1.7; color:#d6d0c4; }
+  #guideList li { margin-bottom:10px; }
+
+  @media (max-width: 820px), (pointer: coarse) {
+    #joystick-zone, #look-zone, #interact-btn, #jump-btn, #break-btn, #place-btn { display:flex; }
+  }
+
+  /* ---------- Modal ---------- */
+  #modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:50; display:none; align-items:center; justify-content:center; padding:20px; }
+  #modal-box { width:min(600px, 100%); max-height:84vh; overflow-y:auto; background:#2b2318; border:4px solid #000; box-shadow: inset 0 0 0 4px #4a3d28; color:#eee; }
+  #modal-box.retro { background:#0d1a0d; box-shadow: inset 0 0 0 4px #0a0; }
+  #modal-head { display:flex; align-items:center; justify-content:space-between; background:#1d1710; padding:14px 18px; border-bottom:3px solid #000; }
+  .retro #modal-head { background:#0a0; }
+  #modal-head h2 { font-size:15px; letter-spacing:1px; color:#7ee36b; display:flex; align-items:center; }
+  .retro #modal-head h2 { color:#0d1a0d; }
+  #modal-head .icon { font-size:13px; margin-right:10px; background:#000; padding:2px 6px; }
+  #modal-close { background:#6b3d3d; border:2px solid #000; color:#fff; width:26px; height:26px; cursor:pointer; font-size:14px; box-shadow: inset -2px -2px 0 #4a2828, inset 2px 2px 0 #8f5c5c; }
+  #modal-body { padding:18px; font-size:13px; line-height:1.7; }
+  .retro #modal-body { font-family:'Courier New', monospace; color:#5cff5c; background:#0d1a0d; }
+  #modal-body h3 { color:#e3c76b; font-size:13px; margin:16px 0 6px; letter-spacing:.5px; }
+  .retro #modal-body h3 { color:#5cff5c; border-bottom:1px dashed #2a5c2a; padding-bottom:4px; }
+  #modal-body p { color:#d6d0c4; margin-bottom:8px; }
+  .retro #modal-body p { color:#8fff8f; }
+  #modal-body ul { padding-left:18px; margin-bottom:8px; color:#d6d0c4; }
+  .retro #modal-body ul { color:#8fff8f; }
+  #modal-body li { margin-bottom:4px; }
+  .tag-row { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 14px; }
+  .tag { background:#3d4a2b; border:1px solid #000; color:#c9e39b; font-size:10px; padding:4px 8px; letter-spacing:.5px; }
+  .retro .tag { background:#0d1a0d; border:1px solid #5cff5c; color:#5cff5c; }
+  .modal-link { display:inline-block; margin:4px 6px 4px 0; background:#6b8e3d; border:2px solid #000; color:#fff; padding:8px 16px; font-size:11px; letter-spacing:.5px; text-decoration:none; box-shadow: inset -2px -2px 0 #4a6428, inset 2px 2px 0 #8fb85c; }
+  .modal-link.secondary { background:#3d5a8e; box-shadow: inset -2px -2px 0 #283e64, inset 2px 2px 0 #5c7cb8; }
+  .proj-block { border:1px solid #4a3d28; padding:10px 12px; margin-bottom:14px; background:rgba(0,0,0,.15); }
+  .proj-block .status { float:right; font-size:10px; padding:2px 8px; border:1px solid #000; }
+  .status.done { background:#3d7a3d; }
+  .status.wip { background:#9a7a2b; }
+  .cert-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+  .cert-card { border:1px solid #4a3d28; background:rgba(0,0,0,.2); padding:8px; font-size:11px; text-align:center; }
+  .cert-card img { width:100%; height:90px; object-fit:cover; display:block; margin-bottom:6px; border:1px solid #000; background:#1a1510; }
+  .cert-card .ph { width:100%; height:90px; display:flex; align-items:center; justify-content:center; background:#1a1510; border:1px solid #000; margin-bottom:6px; color:#8a7a5a; font-size:9px; padding:6px; }
+  .social-row a { color:#7ee36b; }
+
+  /* ---------- Tutorial ---------- */
+  #tutorialOverlay { position:fixed; inset:0; z-index:70; display:none; align-items:flex-end; justify-content:center; background:rgba(0,0,0,.35); padding-bottom:14vh; }
+  #tutorialBox { background:#2b2318; border:3px solid #000; box-shadow: inset 0 0 0 3px #4a3d28; color:#eee; padding:16px 20px; width:min(420px,90%); text-align:center; }
+  #tutorialText { font-size:13px; line-height:1.6; margin-bottom:10px; }
+  #tutorialStep { font-size:10px; color:#9a8f78; margin-bottom:10px; }
+  #tutorialBox .trow { display:flex; gap:8px; justify-content:center; }
+</style>
+</head>
+<body>
+
+<div id="canvas-wrap"></div>
+
+<div id="boot">
+  <div class="title">JAYESH THAR</div>
+  <div class="name">— PORTFOLIO ROOM —</div>
+  <div class="sub">Final-year Computer Engineering student. Walk around, interact with the room, and try the small build patch.</div>
+  <div id="loadStage">
+    <div class="bar-outer"><div class="bar-inner" id="loadbar"></div></div>
+  </div>
+  <div id="nameStage">
+    <div class="sub">What should I call you?</div>
+    <input id="nameInput" type="text" maxlength="24" placeholder="Your name" autocomplete="off">
+    <button class="mc-btn" id="nameSubmit">Enter Room</button>
+    <div class="hint-small">Desktop: WASD move, mouse look, E interact, F toggle view · Mobile: joystick + touch</div>
+  </div>
+</div>
+
+<div id="introOverlay"><div id="introText"></div></div>
+
+<div id="hud">
+  <div id="crosshair"></div>
+  <div id="hint"></div>
+  <div id="resumeClick"><span>Click to look around again</span></div>
+
+  <div id="topbar">
+    <canvas id="minimap" width="120" height="120"></canvas>
+    <div id="settingsBtn">⚙ Settings</div>
+  </div>
+  <div id="flyBadge">FLYING — Space up / Shift down</div>
+  <div id="sitBadge">SITTING — Press E to stand up</div>
+
+  <div id="settingsPanel">
+    <div class="sp-head"><h3>Settings & Profile</h3><button id="settingsCloseBtn">X</button></div>
+    <div class="sp-body">
+      <h4>View</h4>
+      <button class="sp-btn" id="viewToggleBtn">Switch to Third-Person (F)</button>
+      <h4>Movement</h4>
+      <button class="sp-btn" id="flyToggleBtn">Toggle Fly Mode</button>
+      <h4>Environment</h4>
+      <button class="sp-btn" id="nightToggleBtn">Switch to Night</button>
+      <h4>Help</h4>
+      <button class="sp-btn" id="replayTutorialBtn">Replay Tutorial</button>
+      <button class="sp-btn" id="buildGuideBtn">Build Guide</button>
+      <h4>Controls</h4>
+      <div class="kv">WASD — move</div>
+      <div class="kv">Mouse — look</div>
+      <div class="kv">E / Click — interact</div>
+      <div class="kv">I — open inventory</div>
+      <div class="kv">1-6 — select hotbar item</div>
+      <div class="kv">Left-click — break top block</div>
+      <div class="kv">Right-click — place block (stack up to 4)</div>
+      <div class="kv">F — toggle view</div>
+      <div class="kv">Space (double-tap) — toggle fly</div>
+      <div class="kv">Space — jump / fly up · Shift — run / fly down</div>
+      <h4>Profile</h4>
+      <div class="kv">Name: <span id="profileName">Guest</span></div>
+      <div class="kv">Character color</div>
+      <div id="skinRow"></div>
+    </div>
+  </div>
+
+  <div id="hotbar"></div>
+  <div id="inv-btn">INV (I)</div>
+
+  <div id="joystick-zone"><div id="joystick-base"></div><div id="joystick-handle"></div></div>
+  <div id="look-zone"></div>
+  <div id="jump-btn">JUMP</div>
+  <div id="fly-down-btn">DOWN</div>
+  <div id="interact-btn">INTERACT</div>
+  <div id="break-btn">BREAK</div>
+  <div id="place-btn">PLACE</div>
+</div>
+
+<div id="inventoryOverlay">
+  <div id="inventoryBox">
+    <div class="inv-head"><h2>Inventory</h2><button id="inventoryClose">X</button></div>
+    <div id="inventoryGrid"></div>
+    <div class="inv-note">Select a hotbar slot (1-5), then click a block here to load it into that slot.</div>
+  </div>
+</div>
+
+<div id="guideOverlay">
+  <div id="guideBox">
+    <div class="inv-head"><h2>Build Guide</h2><button id="guideClose">X</button></div>
+    <div id="guideList"></div>
+  </div>
+</div>
+
+<div id="modal-overlay">
+  <div id="modal-box">
+    <div id="modal-head">
+      <h2><span class="icon" id="modal-icon">*</span><span id="modal-title">Title</span></h2>
+      <button id="modal-close">X</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div id="tutorialOverlay">
+  <div id="tutorialBox">
+    <div id="tutorialText"></div>
+    <div id="tutorialStep"></div>
+    <div class="trow">
+      <button class="mc-btn" id="tutorialSkipBtn" style="background:#6b3d3d;box-shadow:inset -3px -3px 0 #4a2828, inset 3px 3px 0 #8f5c5c;">Skip</button>
+      <button class="mc-btn" id="tutorialNextBtn">Next</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script src="js/content.js"></script>
+<script src="js/world.js"></script>
+<script src="js/player.js"></script>
+<script src="js/intro.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
